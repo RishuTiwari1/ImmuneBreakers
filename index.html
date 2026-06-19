@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Immune Check Breakers!</title>
+    <style>
+        :root {
+            --bg-main: #0a0f18; --bg-radial: #1e293b; --bg-card: rgba(20, 30, 48, 0.85);
+            --border-glass: rgba(255, 255, 255, 0.15); --text-main: #f8fafc; --text-muted: #94a3b8;
+            --shadow-glass: rgba(0, 0, 0, 0.5); --panel-border: #38bdf8;
+            --t-cell: linear-gradient(135deg, #ef4444 0%, #991b1b 100%);
+            --apc-cell: linear-gradient(135deg, #0ea5e9 0%, #0369a1 100%);
+            --tumor-cell: linear-gradient(135deg, #d946ef 0%, #701a75 100%);
+            --c-tcr: #ef4444; --c-mhc: #3b82f6; --c-cd28: #f97316; --c-b7: #eab308;
+            --c-ctla4: #10b981; --c-pd1: #6366f1; --c-pdl1: #ec4899;
+            --c-ipi: #f59e0b; --c-pembro: #10b981; --c-atezo: #8b5cf6;
+        }
+
+        body.light-mode {
+            --bg-main: #f1f5f9; --bg-radial: #e2e8f0; --bg-card: rgba(255, 255, 255, 0.9);
+            --border-glass: rgba(0, 0, 0, 0.15); --text-main: #0f172a; --text-muted: #475569;
+            --shadow-glass: rgba(0, 0, 0, 0.1); --panel-border: #0ea5e9;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: radial-gradient(circle at 50% 50%, var(--bg-radial) 0%, var(--bg-main) 100%);
+            color: var(--text-main); margin: 0; padding: 20px;
+            min-height: 100vh; overflow-x: hidden;
+            transition: background 0.5s ease, color 0.5s ease;
+        }
+
+        /* --- SPLASH SCREEN --- */
+        #splash-screen {
+            position: fixed; inset: 0; background: #f1f5f9; z-index: 9999;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            transition: opacity 0.8s ease, visibility 0.8s ease;
+        }
+        .splash-title {
+            font-size: 4.5rem; margin: 0; text-align: center; font-weight: 900;
+            background: linear-gradient(90deg, #38bdf8, #a855f7, #10b981, #f59e0b, #38bdf8);
+            background-size: 300% auto; color: transparent; -webkit-background-clip: text; background-clip: text;
+            animation: text-glint 3s linear infinite, subtle-pulse 2s infinite alternate;
+            filter: drop-shadow(0 0 15px rgba(168, 85, 247, 0.4));
+        }
+        .splash-subtitle { font-size: 1.5rem; color: #475569; font-weight: 700; margin-top: 15px; letter-spacing: 2px; }
+        .splash-subtitle span { color: #a855f7; }
+
+        /* --- UI COMPONENTS --- */
+        .top-bar { position: absolute; top: 20px; right: 20px; z-index: 200; }
+        .theme-btn {
+            background: var(--bg-card); border: 1px solid var(--border-glass); color: var(--text-main);
+            padding: 10px 15px; border-radius: 20px; cursor: pointer; font-weight: bold;
+            box-shadow: 0 4px 15px var(--shadow-glass); transition: transform 0.3s; backdrop-filter: blur(8px);
+        }
+        .theme-btn:hover { transform: scale(1.05); }
+
+        header {
+            text-align: center; margin-bottom: 20px; padding: 15px; border-radius: 12px;
+            background: var(--bg-card); border: 1px solid var(--border-glass);
+            box-shadow: 0 8px 30px var(--shadow-glass); backdrop-filter: blur(12px);
+        }
+        h1 { margin: 0; font-size: 2.2rem; font-weight: 800; color: #38bdf8; text-shadow: 0 0 10px rgba(56, 189, 248, 0.3); }
+        .subtitle { margin: 5px 0 15px; color: var(--text-muted); font-weight: 500; }
+        
+        .app-tabs { display: inline-flex; gap: 10px; background: rgba(0,0,0,0.1); padding: 5px; border-radius: 10px; border: 1px solid var(--border-glass); }
+        .app-tab { padding: 10px 30px; border-radius: 8px; border: none; background: transparent; color: var(--text-muted); font-weight: bold; cursor: pointer; transition: 0.3s; }
+        .app-tab.active { background: #38bdf8; color: #fff; box-shadow: 0 0 15px rgba(56, 189, 248, 0.5); }
+
+        .app-layout { display: grid; grid-template-columns: 320px 1fr; gap: 20px; max-width: 1600px; margin: 0 auto; }
+
+        .glass-panel {
+            background: var(--bg-card); border: 1px solid var(--border-glass); border-radius: 16px;
+            padding: 20px; box-shadow: 0 12px 40px var(--shadow-glass); backdrop-filter: blur(16px);
+            display: flex; flex-direction: column; gap: 10px;
+        }
+        h3 { margin: 0 0 10px; color: var(--text-main); font-size: 1.15rem; border-bottom: 1px solid var(--border-glass); padding-bottom: 10px; }
+
+        .menu-btn {
+            width: 100%; padding: 14px 16px; background: rgba(128, 128, 128, 0.1); border: 1px solid var(--border-glass);
+            border-radius: 8px; color: var(--text-muted); cursor: pointer; text-align: left; font-weight: 600; transition: 0.3s;
+        }
+        .menu-btn:hover { background: rgba(56, 189, 248, 0.1); color: #38bdf8; border-color: #38bdf8; }
+        .menu-btn.active { background: #0284c7; color: white; border-color: #7dd3fc; box-shadow: 0 0 15px rgba(2, 132, 199, 0.4); }
+
+        .sequencer-bar { flex-direction: row; align-items: center; justify-content: space-between; border-color: var(--panel-border); }
+        .step-title { font-size: 1.3rem; font-weight: 800; color: #38bdf8; margin-bottom: 6px; }
+        .step-desc { font-size: 1.05rem; color: var(--text-main); line-height: 1.6; max-width: 900px; margin: 0; }
+        
+        .action-btn {
+            background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; padding: 14px 28px;
+            font-size: 1.05rem; font-weight: 800; border-radius: 8px; cursor: pointer; transition: 0.3s; min-width: 160px;
+        }
+        .action-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(16, 185, 129, 0.6); }
+        .action-btn:disabled { background: #94a3b8; color: #f1f5f9; cursor: not-allowed; }
+
+        #practice-feedback { display: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; margin-top: 15px; }
+
+        /* --- ENGINE CANVAS --- */
+        .canvas {
+            min-height: 600px; background-image: radial-gradient(circle at center, rgba(128,128,128,0.1) 1px, transparent 1px);
+            background-size: 30px 30px; display: flex; justify-content: center; align-items: center; overflow: hidden;
+        }
+        .canvas-stage { display: flex; gap: 200px; width: 100%; height: 100%; justify-content: center; align-items: center; transition: 1.2s cubic-bezier(0.25, 1, 0.5, 1); }
+        .canvas-stage.zoomed { transform: scale(1.15); }
+
+        .cell {
+            width: 180px; height: 440px; border-radius: 60px; position: relative; display: flex; justify-content: center; align-items: center;
+            color: white; font-weight: 900; font-size: 1.8rem; letter-spacing: 2px; border: 2px solid rgba(255,255,255,0.3);
+            box-shadow: 0 0 40px var(--shadow-glass), inset 0 0 50px rgba(255,255,255,0.2); transition: 1s ease;
+        }
+        .cell-t { background: var(--t-cell); }
+        .cell-target { background: var(--apc-cell); }
+        .cell-target.tumor-mode { background: var(--tumor-cell); }
+
+        .receptor-row { position: absolute; display: flex; align-items: center; opacity: 0; pointer-events: none; transform: scale(0.8); transition: 0.8s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .pos-1 { top: 10%; } .pos-2 { top: 30%; } .pos-3 { top: 50%; } .pos-4 { top: 70%; } .pos-5 { top: 90%; }
+        .cell-t .receptor-row { left: 100%; flex-direction: row; transform: translateX(-20px) scale(0.8); }
+        .cell-target .receptor-row { right: 100%; flex-direction: row-reverse; transform: translateX(20px) scale(0.8); }
+        .receptor-row.visible { opacity: 1; transform: translateX(0) scale(1); }
+
+        .stalk { height: 6px; width: 10px; background: rgba(128, 128, 128, 0.5); transition: 0.8s; }
+        .head {
+            width: 50px; height: 34px; display: flex; justify-content: center; align-items: center; border-radius: 8px; font-size: 0.75rem;
+            font-weight: 900; color: white; border: 2px solid rgba(255,255,255,0.5); position: relative; z-index: 5;
+            background-color: var(--color); box-shadow: 0 4px 10px rgba(0,0,0,0.3); transition: 0.3s ease;
+        }
+
+        .tcr { --color: var(--c-tcr); } .mhc { --color: var(--c-mhc); } .cd28 { --color: var(--c-cd28); } .b7 { --color: var(--c-b7); color: black; }
+        .ctla4 { --color: var(--c-ctla4); } .pd1 { --color: var(--c-pd1); } .pdl1 { --color: var(--c-pdl1); }
+
+        .practice-mode .receptor-row { pointer-events: auto; }
+        .practice-mode .head { cursor: pointer; }
+        .practice-mode .head:hover { transform: scale(1.2); box-shadow: 0 0 15px white; }
+        .practice-mode .head.selected-marker { border: 3px solid yellow; box-shadow: 0 0 20px yellow; transform: scale(1.15); }
+
+        .receptor-row.bound .stalk { width: 50px; }
+        .receptor-row.bound .head { animation: pulse-glow 2s infinite alternate; border-color: white; z-index: 20; }
+        .receptor-row.inhibited .head { filter: grayscale(1) brightness(0.6); border: 2px dashed #ef4444; box-shadow: none; animation: none; }
+
+        @keyframes pulse-glow { 0% { box-shadow: 0 0 10px 2px var(--color), inset 0 0 5px rgba(255,255,255,0.5); } 100% { box-shadow: 0 0 30px 10px var(--color), inset 0 0 15px rgba(255,255,255,0.9); } }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 20%, 60% { transform: translateX(-10px); } 40%, 80% { transform: translateX(10px); } }
+        .shake-error { animation: shake 0.5s ease-in-out; }
+
+        /* --- DRUGS --- */
+        .drug-molecule {
+            position: absolute; left: 50%; top: -100px; background: var(--bg-card); border: 2px solid; color: var(--text-main);
+            padding: 8px 16px; border-radius: 30px; font-size: 0.85rem; font-weight: 800; opacity: 0; pointer-events: none; z-index: 100;
+            display: flex; align-items: center; gap: 8px; transform: translate(-50%, -50%) rotate(-45deg) scale(0.5); transition: 1s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .drug-icon { font-size: 1.4rem; line-height: 1; }
+        #drug-ipi { border-color: var(--c-ipi); box-shadow: 0 0 30px rgba(245, 158, 11, 0.4); } #drug-ipi .drug-icon { color: var(--c-ipi); }
+        #drug-pembro { border-color: var(--c-pembro); box-shadow: 0 0 30px rgba(16, 185, 129, 0.4); } #drug-pembro .drug-icon { color: var(--c-pembro); }
+        #drug-atezo { border-color: var(--c-atezo); box-shadow: 0 0 30px rgba(139, 92, 246, 0.4); } #drug-atezo .drug-icon { color: var(--c-atezo); }
+
+        .deploy-pos3-tcell { opacity: 1; top: 50%; transform: translate(calc(-50% - 40px), -50%) scale(1.1); }
+        .deploy-pos4-tcell { opacity: 1; top: 70%; transform: translate(calc(-50% - 40px), -50%) scale(1.1); }
+        .deploy-pos4-target { opacity: 1; top: 70%; transform: translate(calc(-50% + 40px), -50%) scale(1.1); flex-direction: row-reverse; }
+
+        /* --- FOOTER --- */
+        .developer-credit { text-align: center; margin-top: 30px; font-weight: 800; font-size: 1.1rem; animation: subtle-pulse 3s infinite alternate; letter-spacing: 1px; }
+        .developer-credit span {
+            background: linear-gradient(90deg, #38bdf8, #a855f7, #10b981, #f59e0b, #38bdf8); background-size: 300% auto;
+            color: transparent; -webkit-background-clip: text; background-clip: text; animation: text-glint 4s linear infinite;
+        }
+        @keyframes text-glint { to { background-position: 300% center; } }
+        @keyframes subtle-pulse { 0% { transform: scale(1); } 100% { transform: scale(1.05); } }
+    </style>
+</head>
+<body>
+
+    <div id="splash-screen">
+        <h1 class="splash-title">Immune Check Breakers!</h1>
+        <p class="splash-subtitle">Developed by <span>Rishu Tiwari</span></p>
+    </div>
+
+    <div class="top-bar">
+        <button class="theme-btn" onclick="toggleTheme()">⚙️ Toggle Theme</button>
+    </div>
+
+    <header>
+        <h1>Immune Check Breakers!</h1>
+        <p class="subtitle">Educational Pharmacodynamic Simulator & Sandbox</p>
+        <div class="app-tabs">
+            <button class="app-tab active" id="tab-sim" onclick="switchMode('sim')">Interactive Learning</button>
+            <button class="app-tab" id="tab-practice" onclick="switchMode('practice')">Knowledge Sandbox</button>
+        </div>
+    </header>
+
+    <div class="app-layout">
+        <div class="glass-panel" id="sidebar-sim">
+            <h3>Learn Pathways</h3>
+            <button class="menu-btn sim-btn active" onclick="loadSim('normal', this)">1. Normal Immune Response</button>
+            <button class="menu-btn sim-btn" onclick="loadSim('tumor', this)">2. Tumor Evasion (Cloaking)</button>
+            <button class="menu-btn sim-btn" onclick="loadSim('ipi', this)">3. Anti-CTLA-4 Mechanism</button>
+            <button class="menu-btn sim-btn" onclick="loadSim('pembro', this)">4. Anti-PD-1 Mechanism</button>
+            <button class="menu-btn sim-btn" onclick="loadSim('atezo', this)">5. Anti-PD-L1 Mechanism</button>
+        </div>
+
+        <div class="glass-panel" id="sidebar-practice" style="display: none;">
+            <h3>Knowledge Checks</h3>
+            <button class="menu-btn prac-btn active" onclick="loadPractice(0, this)">1. Identifying the Threat</button>
+            <button class="menu-btn prac-btn" onclick="loadPractice(1, this)">2. Waking the T-Cell</button>
+            <button class="menu-btn prac-btn" onclick="loadPractice(2, this)">3. The Built-in Brakes</button>
+            <button class="menu-btn prac-btn" onclick="loadPractice(3, this)">4. Tumor Exhaustion Trick</button>
+            <button class="menu-btn prac-btn" onclick="loadPractice(4, this)">5. Deploy Pembrolizumab</button>
+            <button class="menu-btn prac-btn" onclick="loadPractice(5, this)">6. Deploy Atezolizumab</button>
+            <button class="menu-btn prac-btn" onclick="loadPractice(6, this)">7. Deploy Ipilimumab</button>
+            <p style="font-size: 0.85rem; color:var(--text-muted); margin-top: 15px; line-height: 1.4;">
+                <strong>Instructions:</strong> Read the scenario prompt, then click the correct marker(s) to solve the puzzle.
+            </p>
+        </div>
+
+        <div class="sim-container">
+            <div class="glass-panel sequencer-bar">
+                <div style="flex-grow: 1; padding-right: 20px;">
+                    <div class="step-title" id="display-title">Loading...</div>
+                    <p class="step-desc" id="display-desc">Please wait.</p>
+                    <div id="practice-feedback"></div>
+                </div>
+                <button class="action-btn" id="btn-next-step" onclick="advanceSim()">Next Step &rarr;</button>
+                <button class="action-btn" id="btn-check-ans" onclick="checkAnswer()" style="display:none; background: #38bdf8; color: #0a0f18;">Check Match &rarr;</button>
+            </div>
+
+            <div class="glass-panel canvas" id="main-canvas">
+                <div class="canvas-stage" id="canvas-stage">
+                    
+                    <div class="drug-molecule" id="drug-ipi"><span class="drug-icon">🛡️</span> Ipilimumab (Anti-CTLA-4)</div>
+                    <div class="drug-molecule" id="drug-pembro"><span class="drug-icon">🔒</span> Pembrolizumab (Anti-PD-1)</div>
+                    <div class="drug-molecule" id="drug-atezo"><span class="drug-icon">🎯</span> Atezolizumab (Anti-PD-L1)</div>
+
+                    <div class="cell cell-t" id="node-t-cell">
+                        T-Cell
+                        <div class="receptor-row pos-1" id="row-tcr" data-cell="t-cell" data-marker="tcr" onclick="selectMarker(this)"><div class="stalk"></div><div class="head tcr">TCR</div></div>
+                        <div class="receptor-row pos-2" id="row-cd28" data-cell="t-cell" data-marker="cd28" onclick="selectMarker(this)"><div class="stalk"></div><div class="head cd28">CD28</div></div>
+                        <div class="receptor-row pos-3" id="row-ctla4" data-cell="t-cell" data-marker="ctla4" onclick="selectMarker(this)"><div class="stalk"></div><div class="head ctla4">CTLA-4</div></div>
+                        <div class="receptor-row pos-4" id="row-pd1" data-cell="t-cell" data-marker="pd1" onclick="selectMarker(this)"><div class="stalk"></div><div class="head pd1">PD-1</div></div>
+                    </div>
+
+                    <div class="cell cell-target" id="node-target-cell">
+                        <span id="target-cell-label">APC</span>
+                        <div class="receptor-row pos-1" id="row-mhc" data-cell="target" data-marker="mhc" onclick="selectMarker(this)"><div class="stalk"></div><div class="head mhc">MHC</div></div>
+                        <div class="receptor-row pos-2" id="row-b7" data-cell="target" data-marker="b7" onclick="selectMarker(this)"><div class="stalk"></div><div class="head b7">B7</div></div>
+                        <div class="receptor-row pos-3" id="row-b7-alt" data-cell="target" data-marker="b7" onclick="selectMarker(this)"><div class="stalk"></div><div class="head b7">B7</div></div>
+                        <div class="receptor-row pos-4" id="row-pdl1" data-cell="target" data-marker="pdl1" onclick="selectMarker(this)"><div class="stalk"></div><div class="head pdl1">PD-L1</div></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="developer-credit">Developed by <span>Rishu Tiwari</span></div>
+
+    <script>
+        // DOM Utility Shorthands for efficiency
+        const $ = id => document.getElementById(id);
+        const $$ = sel => document.querySelectorAll(sel);
+        const setClasses = (ids, cls, state) => ids.forEach(id => $(id)?.classList.toggle(cls, state));
+
+        // Splash Screen Logic
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                $('splash-screen').style.opacity = '0';
+                setTimeout(() => $('splash-screen').style.visibility = 'hidden', 800);
+            }, 2500);
+        });
+
+        // App State
+        let currentMode = 'sim', isLightMode = false;
+        let activeSim = 'normal', simStep = 0, activePracticeIdx = 0;
+        let selectedT = null, selectedTarget = null;
+
+        const toggleTheme = () => {
+            isLightMode = !isLightMode;
+            document.body.classList.toggle('light-mode', isLightMode);
+        };
+
+        const switchMode = (mode) => {
+            currentMode = mode;
+            $('tab-sim').className = mode === 'sim' ? 'app-tab active' : 'app-tab';
+            $('tab-practice').className = mode === 'practice' ? 'app-tab active' : 'app-tab';
+            $('sidebar-sim').style.display = mode === 'sim' ? 'flex' : 'none';
+            $('sidebar-practice').style.display = mode === 'practice' ? 'flex' : 'none';
+            $('btn-next-step').style.display = mode === 'sim' ? 'block' : 'none';
+            $('btn-check-ans').style.display = mode === 'practice' ? 'block' : 'none';
+            $('main-canvas').className = mode === 'practice' ? 'glass-panel canvas practice-mode' : 'glass-panel canvas';
+            $('practice-feedback').style.display = 'none';
+            mode === 'sim' ? loadSim('normal', $$('.sim-btn')[0]) : loadPractice(0, $$('.prac-btn')[0]);
+        };
+
+        const resetCanvas = (cellType) => {
+            const tgt = $('node-target-cell');
+            tgt.className = `cell cell-target ${cellType === 'Tumor' ? 'tumor-mode' : ''}`;
+            $('target-cell-label').innerText = cellType;
+            $$('.receptor-row').forEach(row => row.classList.remove('visible', 'bound', 'inhibited'));
+            $$('.head').forEach(h => h.classList.remove('selected-marker'));
+            $$('.drug-molecule').forEach(d => d.className = 'drug-molecule');
+            $('canvas-stage').classList.remove('zoomed', 'shake-error');
+            $('practice-feedback').style.display = 'none';
+        };
+
+        const fireConfetti = () => {
+            const colors = ['#38bdf8', '#10b981', '#f59e0b', '#ef4444', '#a855f7'];
+            for(let i=0; i<60; i++) {
+                let conf = document.createElement('div');
+                Object.assign(conf.style, {
+                    position: 'fixed', width: Math.random() * 8 + 6 + 'px', height: Math.random() * 8 + 6 + 'px',
+                    backgroundColor: colors[Math.floor(Math.random() * colors.length)], left: Math.random() * 100 + 'vw',
+                    top: '-20px', zIndex: '9999', borderRadius: Math.random() > 0.5 ? '50%' : '2px'
+                });
+                document.body.appendChild(conf);
+                let fallSpeed = 2500 + Math.random() * 2000;
+                conf.animate([{ transform: `translateY(0) rotate(0)`, opacity: 1 }, { transform: `translateY(100vh) rotate(${Math.random() * 360}deg)`, opacity: 0 }], { duration: fallSpeed, easing: 'cubic-bezier(.37,0,.63,1)' });
+                setTimeout(() => conf.remove(), fallSpeed);
+            }
+        };
+
+        // DOM Mutators
+        const reveal = ids => setClasses(ids, 'visible', true);
+        const bind = ids => setClasses(ids, 'bound', true);
+        const unbind = ids => setClasses(ids, 'bound', false);
+        const setInhibited = ids => setClasses(ids, 'inhibited', true);
+        const deployDrug = (id, cls) => $(id).className = `drug-molecule ${cls}`;
+        const zoom = bool => $('canvas-stage').classList.toggle('zoomed', bool);
+
+        // Simulation Data
+        const simData = {
+            normal: [
+                { t: "Step 1: Identifying the Threat", d: "APC presents antigen via MHC to the TCR. 'Signal 1'—the ignition key.", s: () => { resetCanvas('APC'); reveal(['row-tcr', 'row-mhc']); bind(['row-tcr', 'row-mhc']); } },
+                { t: "Step 2: Co-Stimulation", d: "APC's B7 binds T-Cell's CD28. 'Signal 2' gives permission to fully activate.", s: () => { reveal(['row-cd28', 'row-b7']); bind(['row-cd28', 'row-b7']); zoom(true); } },
+                { t: "Step 3: Built-in Brakes", d: "T-Cell deploys CTLA-4, blocking the B7 signal to prevent healthy tissue damage.", s: () => { reveal(['row-ctla4', 'row-b7-alt']); unbind(['row-cd28']); setInhibited(['row-cd28']); bind(['row-ctla4', 'row-b7-alt']); zoom(false); } }
+            ],
+            tumor: [
+                { t: "Step 1: Tumor Engagement", d: "Mutated tumor cell recognized by T-Cell's TCR, preparing for attack.", s: () => { resetCanvas('Tumor'); reveal(['row-tcr', 'row-mhc']); bind(['row-tcr', 'row-mhc']); } },
+                { t: "Step 2: Cloaking Mechanism", d: "Tumor creates PD-L1. Connecting to PD-1 sends an 'exhaustion' signal.", s: () => { reveal(['row-pd1', 'row-pdl1']); bind(['row-pd1', 'row-pdl1']); zoom(true); } }
+            ],
+            ipi: [
+                { t: "Step 1: Premature Brakes", d: "CTLA-4 locked onto B7 prematurely, suppressing T-cells.", s: () => { resetCanvas('APC'); reveal(['row-tcr', 'row-mhc', 'row-cd28', 'row-ctla4', 'row-b7', 'row-b7-alt']); bind(['row-tcr', 'row-mhc', 'row-ctla4', 'row-b7-alt']); } },
+                { t: "Step 2: Blocking CTLA-4", d: "Ipilimumab covers CTLA-4. B7 reconnects with CD28 to attack.", s: () => { unbind(['row-ctla4']); setInhibited(['row-ctla4']); deployDrug('drug-ipi', 'deploy-pos3-tcell'); bind(['row-cd28', 'row-b7']); zoom(true); } }
+            ],
+            pembro: [
+                { t: "Step 1: Tumor's Shield", d: "Tumor uses PD-L1 to press the T-cell's PD-1 'off switch'.", s: () => { resetCanvas('Tumor'); reveal(['row-tcr', 'row-mhc', 'row-pd1', 'row-pdl1']); bind(['row-tcr', 'row-mhc', 'row-pd1', 'row-pdl1']); } },
+                { t: "Step 2: Shielding PD-1", d: "Pembrolizumab binds T-Cell's PD-1, preventing tumor connection.", s: () => { unbind(['row-pd1', 'row-pdl1']); setInhibited(['row-pd1']); deployDrug('drug-pembro', 'deploy-pos4-tcell'); zoom(true); } }
+            ],
+            atezo: [
+                { t: "Step 1: Tumor's Shield", d: "Tumor bridges PD-L1 marker with T-cell's PD-1 receptor.", s: () => { resetCanvas('Tumor'); reveal(['row-tcr', 'row-mhc', 'row-pd1', 'row-pdl1']); bind(['row-tcr', 'row-mhc', 'row-pd1', 'row-pdl1']); } },
+                { t: "Step 2: Neutralizing PD-L1", d: "Atezolizumab blankets tumor's PD-L1 molecules, freeing T-cell.", s: () => { unbind(['row-pd1', 'row-pdl1']); setInhibited(['row-pdl1']); deployDrug('drug-atezo', 'deploy-pos4-target'); zoom(true); } }
+            ]
+        };
+
+        const loadSim = (key, btn) => {
+            $$('.sim-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active'); activeSim = key; simStep = 0; renderSimStep();
+        };
+
+        const renderSimStep = () => {
+            const d = simData[activeSim][simStep], btn = $('btn-next-step');
+            $('display-title').innerText = d.t; $('display-desc').innerText = d.d; d.s();
+            btn.innerText = simStep === simData[activeSim].length - 1 ? "Complete" : "Next Step \u2192";
+            btn.disabled = simStep === simData[activeSim].length - 1;
+        };
+
+        const advanceSim = () => { if(simStep < simData[activeSim].length - 1) { simStep++; renderSimStep(); } };
+
+        // Practice Data
+        const practiceData = [
+            { t: "1. Identifying the Threat", d: "Select receptors for primary 'Signal 1' ignition.", c: 'APC', e: {t: 'tcr', a: 'mhc'}, v: ['row-tcr', 'row-cd28', 'row-pd1', 'row-mhc', 'row-b7', 'row-pdl1'] },
+            { t: "2. Waking the T-Cell", d: "Which markers pair to deliver 'Signal 2' co-stimulation?", c: 'APC', e: {t: 'cd28', a: 'b7'}, v: ['row-tcr', 'row-cd28', 'row-ctla4', 'row-mhc', 'row-b7', 'row-b7-alt'] },
+            { t: "3. The Built-in Brakes", d: "Identify inhibitory receptor pair that prevents autoimmunity.", c: 'APC', e: {t: 'ctla4', a: 'b7'}, v: ['row-cd28', 'row-ctla4', 'row-pd1', 'row-b7', 'row-b7-alt', 'row-pdl1'] },
+            { t: "4. Tumor Exhaustion Trick", d: "Which markers do tumors use to force T-cell exhaustion?", c: 'Tumor', e: {t: 'pd1', a: 'pdl1'}, v: ['row-tcr', 'row-cd28', 'row-pd1', 'row-mhc', 'row-b7', 'row-pdl1'] },
+            { t: "5. Deploy Pembrolizumab", d: "Click specific target Pembrolizumab binds to shield the 'off switch'.", c: 'Tumor', e: {s: 'pd1', id: 'drug-pembro', cls: 'deploy-pos4-tcell', row: 'row-pd1'}, v: ['row-tcr', 'row-ctla4', 'row-pd1', 'row-mhc', 'row-pdl1'] },
+            { t: "6. Deploy Atezolizumab", d: "Click specific tumor ligand targeted directly by Atezolizumab.", c: 'Tumor', e: {s: 'pdl1', id: 'drug-atezo', cls: 'deploy-pos4-target', row: 'row-pdl1'}, v: ['row-tcr', 'row-ctla4', 'row-pd1', 'row-mhc', 'row-pdl1'] },
+            { t: "7. Deploy Ipilimumab", d: "Click specific brake pedal receptor blocked by Ipilimumab.", c: 'APC', e: {s: 'ctla4', id: 'drug-ipi', cls: 'deploy-pos3-tcell', row: 'row-ctla4'}, v: ['row-cd28', 'row-ctla4', 'row-pd1', 'row-b7', 'row-pdl1'] }
+        ];
+
+        const loadPractice = (idx, btn) => {
+            $$('.prac-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active');
+            activePracticeIdx = idx; selectedT = null; selectedTarget = null;
+            const p = practiceData[idx];
+            $('display-title').innerText = p.t; $('display-desc').innerText = p.d;
+            resetCanvas(p.c); reveal(p.v);
+        };
+
+        const selectMarker = el => {
+            if (currentMode !== 'practice') return;
+            const isT = el.dataset.cell === 't-cell', p = practiceData[activePracticeIdx];
+            if (p.e.s) { $$('.head').forEach(h => h.classList.remove('selected-marker')); selectedT = el.dataset.marker; el.querySelector('.head').classList.add('selected-marker'); return; }
+            $$(isT ? '#node-t-cell .head' : '#node-target-cell .head').forEach(h => h.classList.remove('selected-marker'));
+            isT ? selectedT = el.dataset.marker : selectedTarget = el.dataset.marker;
+            el.querySelector('.head').classList.add('selected-marker');
+        };
+
+        const checkAnswer = () => {
+            const p = practiceData[activePracticeIdx], fb = $('practice-feedback'), stage = $('canvas-stage');
+            stage.classList.remove('shake-error'); void stage.offsetWidth;
+            if (p.e.s && !selectedT) return alert("Select a marker.");
+            if (!p.e.s && (!selectedT || !selectedTarget)) return alert("Select one marker per cell.");
+
+            const isCorrect = p.e.s ? selectedT === p.e.s : (selectedT === p.e.t && selectedTarget === p.e.a);
+            
+            fb.className = isCorrect ? 'feedback-success' : 'feedback-error';
+            fb.innerHTML = isCorrect ? "<strong>Correct!</strong> Pathway Validated." : "<strong>Incorrect.</strong> Read the prompt again.";
+            fb.style.display = 'block';
+
+            if (isCorrect) {
+                zoom(true); fireConfetti();
+                if (!p.e.s) {
+                    $$('.receptor-row').forEach(r => { if((r.dataset.marker===selectedT && r.dataset.cell==='t-cell') || (r.dataset.marker===selectedTarget && r.dataset.cell==='target')) r.classList.add('bound'); });
+                } else { setInhibited([p.e.row]); deployDrug(p.e.id, p.e.cls); }
+            } else stage.classList.add('shake-error');
+        };
+
+        switchMode('sim'); // Init
+    </script>
+</body>
+</html>
